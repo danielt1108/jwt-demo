@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo JWT - API REST protegida</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <p class="tag">Node.js + Express + JWT</p>
+      <h1>Demo visual de autenticación JWT</h1>
+      <p>
+        Prueba una ruta pública, haz login, intenta acceder a una ruta protegida sin token
+        y después accede usando el token generado.
+      </p>
+    </section>
+
+    <section class="card credentials">
+      <h2>Usuario de prueba</h2>
+      <div class="grid-2">
+        <label>
+          Usuario
+          <input id="username" value="daniel" />
+        </label>
+        <label>
+          Contraseña
+          <input id="password" value="1234" type="password" />
+        </label>
+      </div>
+    </section>
+
+    <section class="card steps">
+      <h2>Pruebas de la API</h2>
+      <div class="buttons">
+        <button onclick="testPublicRoute()">1. Probar ruta pública</button>
+        <button onclick="login()">2. Hacer login y generar token</button>
+        <button onclick="testProfileWithoutToken()">3. Perfil sin token</button>
+        <button onclick="testProfileWithToken()">4. Perfil con token</button>
+      </div>
+    </section>
+
+    <section class="card token-card">
+      <h2>Token JWT generado</h2>
+      <p id="tokenStatus">Todavía no se ha generado ningún token.</p>
+      <textarea id="tokenBox" readonly placeholder="Aquí aparecerá el token después del login"></textarea>
+    </section>
+
+    <section class="card result-card">
+      <h2>Respuesta de la API</h2>
+      <pre id="result">Pulsa un botón para probar la API.</pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

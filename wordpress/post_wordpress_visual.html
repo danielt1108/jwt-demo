@@ -1,0 +1,163 @@
+<h2>Introducción</h2>
+<p>Cuando desarrollamos una aplicación web, muchas veces necesitamos proteger ciertas partes de nuestra API. Por ejemplo, una zona de usuario, un panel de administración o una ruta que devuelve información privada.</p>
+<p>El problema es que una API REST no recuerda por sí sola quién está haciendo cada petición. Cada solicitud es independiente, por lo que necesitamos algún sistema para identificar al usuario después de iniciar sesión.</p>
+<p>En este post vamos a resolver ese problema usando <strong>JWT</strong>. Para que sea más fácil de entender, construiremos una demo visual con <strong>Node.js</strong>, <strong>Express</strong> y una pequeña interfaz web con cuatro botones.</p>
+
+<h2>¿Qué problema vamos a resolver?</h2>
+<p>Queremos demostrar cómo una API REST puede tener rutas públicas y rutas protegidas. Una ruta pública puede consultarse sin iniciar sesión, pero una ruta protegida debe comprobar si el usuario tiene un token válido.</p>
+<p>El flujo será el siguiente:</p>
+<ol>
+  <li>El usuario prueba una ruta pública.</li>
+  <li>El usuario hace login con usuario y contraseña.</li>
+  <li>El backend genera un token JWT.</li>
+  <li>El usuario intenta acceder a una ruta protegida sin token y la API lo bloquea.</li>
+  <li>El usuario accede a la misma ruta enviando el token y la API permite el acceso.</li>
+</ol>
+
+<h2>Lo que vas a aprender</h2>
+<ul>
+  <li>Crear una API básica con Node.js y Express.</li>
+  <li>Crear una ruta pública.</li>
+  <li>Crear una ruta de login que genera un token JWT.</li>
+  <li>Crear un middleware para proteger rutas.</li>
+  <li>Probar el flujo completo desde una interfaz visual.</li>
+</ul>
+
+<h2>Desarrollo paso a paso</h2>
+<h3>1. Crear el proyecto</h3>
+<p>Primero creamos una carpeta para el proyecto e inicializamos Node.js:</p>
+<pre><code>mkdir jwt-api-visual-demo
+cd jwt-api-visual-demo
+npm init -y</code></pre>
+
+<h3>2. Instalar dependencias</h3>
+<p>Instalamos las dependencias necesarias:</p>
+<pre><code>npm install express jsonwebtoken dotenv</code></pre>
+<p>También podemos instalar nodemon para trabajar de forma más cómoda:</p>
+<pre><code>npm install -D nodemon</code></pre>
+
+<h3>3. Crear el servidor</h3>
+<p>En el archivo <code>index.js</code> configuramos Express, habilitamos JSON y servimos la carpeta pública donde estará la interfaz web.</p>
+<pre><code>const express = require('express');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'clave_demo_no_usar_en_produccion';
+
+app.use(express.json());
+app.use(express.static('public'));</code></pre>
+
+<h3>4. Crear usuario de prueba</h3>
+<p>Para simplificar la demo, usamos un usuario fijo:</p>
+<pre><code>const userDemo = {
+  id: 1,
+  username: 'daniel',
+  password: '1234',
+  role: 'user'
+};</code></pre>
+
+<h3>5. Crear ruta pública</h3>
+<p>Esta ruta puede consultarse sin autenticación:</p>
+<pre><code>app.get('/api/public', (req, res) =&gt; {
+  res.json({
+    ok: true,
+    message: 'Esta es una ruta pública. No necesitas token para acceder.'
+  });
+});</code></pre>
+
+<h3>6. Crear login con JWT</h3>
+<p>La ruta de login recibe usuario y contraseña. Si son correctos, genera un token JWT:</p>
+<pre><code>app.post('/api/login', (req, res) =&gt; {
+  const { username, password } = req.body;
+
+  if (username !== userDemo.username || password !== userDemo.password) {
+    return res.status(401).json({
+      ok: false,
+      message: 'Usuario o contraseña incorrectos'
+    });
+  }
+
+  const token = jwt.sign(
+    {
+      id: userDemo.id,
+      username: userDemo.username,
+      role: userDemo.role
+    },
+    JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+
+  res.json({
+    ok: true,
+    message: 'Login correcto. Token JWT generado.',
+    token
+  });
+});</code></pre>
+
+<h3>7. Crear middleware de autenticación</h3>
+<p>El middleware comprueba si la petición incluye un token válido:</p>
+<pre><code>function authenticateToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader &amp;&amp; authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({
+      ok: false,
+      message: 'Acceso denegado. No se ha enviado ningún token.'
+    });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) =&gt; {
+    if (err) {
+      return res.status(403).json({
+        ok: false,
+        message: 'Token inválido o expirado.'
+      });
+    }
+
+    req.user = user;
+    next();
+  });
+}</code></pre>
+
+<h3>8. Crear ruta protegida</h3>
+<p>Esta ruta solo funciona si el token es válido:</p>
+<pre><code>app.get('/api/profile', authenticateToken, (req, res) =&gt; {
+  res.json({
+    ok: true,
+    message: 'Has accedido a una ruta protegida usando un token válido.',
+    user: req.user
+  });
+});</code></pre>
+
+<h3>9. Crear interfaz visual</h3>
+<p>Para que la demo sea más sencilla, la interfaz tiene cuatro botones:</p>
+<ul>
+  <li>Probar ruta pública.</li>
+  <li>Hacer login y generar token.</li>
+  <li>Probar perfil sin token.</li>
+  <li>Probar perfil con token.</li>
+</ul>
+<p>De esta forma no hace falta utilizar Postman ni Thunder Client durante el vídeo.</p>
+
+<h2>Problemas encontrados</h2>
+<p>Uno de los problemas principales al trabajar con JWT es enviar mal el token. El formato habitual es <code>Authorization: Bearer TOKEN</code>. Si falta la palabra Bearer o el token está mal copiado, la API no permite el acceso.</p>
+<p>También es importante configurar correctamente la clave secreta. Si el token se firma con una clave y se intenta validar con otra diferente, la verificación fallará.</p>
+
+<h2>Recomendaciones</h2>
+<p>Esta demo es sencilla, pero en una aplicación real habría que aplicar más medidas de seguridad. Por ejemplo, las contraseñas no deberían guardarse en texto plano, sino cifradas con una librería como bcrypt.</p>
+<p>También es recomendable no subir el archivo <code>.env</code> a GitHub, usar HTTPS en producción y no guardar información sensible dentro del token.</p>
+
+<h2>Conclusión</h2>
+<p>JWT es una solución muy utilizada para proteger APIs REST. El funcionamiento básico consiste en generar un token cuando el usuario hace login y exigir ese token cuando quiere acceder a rutas privadas.</p>
+<p>Con esta demo hemos visto el flujo completo de una forma visual: ruta pública, login, token generado, acceso denegado sin token y acceso permitido con token.</p>
+
+<hr>
+<p><strong>Autor:</strong> Daniel Talavera Clemente<br>
+<strong>Máster:</strong> Desarrollo Full Stack + Arquitecturas Cloud<br>
+<strong>Centro:</strong> Tajamar Tech<br>
+<strong>Año académico:</strong> 2025-2026<br>
+<strong>Código / recursos utilizados:</strong> añadir enlace a GitHub<br>
+<strong>Vídeo:</strong> añadir enlace al vídeo de YouTube</p>
